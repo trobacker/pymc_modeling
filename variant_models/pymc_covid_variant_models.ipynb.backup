@@ -1,0 +1,136 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "source": "# Hierarchical Multinomial Models for COVID-19 Variant Dynamics\n\n## Scientific Context\n\nAs SARS-CoV-2 evolves, new variants emerge and compete. Understanding **variant dynamics** helps:\n- Predict which variants will become dominant\n- Inform public health interventions\n- Track variant-specific characteristics (transmissibility, immune escape)\n\n## The Modeling Challenge\n\nWe observe **variant proportions** from genomic sequencing data across:\n- **Multiple locations** (US states)\n- **Over time** (daily/weekly observations)\n- **Multiple variants** (clades like 24A, 24C, 25A, etc.)\n\n**Key questions:**\n1. How do variant proportions change over time?\n2. Do trends differ across locations?\n3. Can we quantify uncertainty in these trends?\n\n## Our Approach: Hierarchical Multinomial Regression\n\n### Why Multinomial?\n\nAt each time point and location, we observe **counts** of different variants from sequencing. These counts follow a **multinomial distribution**:\n- K categories (variants)\n- N total samples\n- Probabilities sum to 1\n\n### Why Hierarchical?\n\nWe want to model **location-specific trends** while borrowing strength across locations. Each state gets:\n- Its own intercepts (α) and slopes (β) per variant\n- Partial pooling via hierarchical structure (future extension)\n\n### Mathematical Model\n\nFor location `l`, variant `v`, and time `t`:\n\n```\nηᵥₗ(t) = αᵥₗ + βᵥₗ · t              (linear predictor on log-odds scale)\npᵥₗ(t) = softmax(ηᵥₗ(t))           (convert to probabilities)\nY ~ Multinomial(n, pᵥₗ(t))         (observed counts)\n```\n\n**Priors:**\n- αᵥₗ ~ Normal(0, 3)\n- βᵥₗ ~ Normal(0, 3)\n\n---\n\n## Data Source\n\nWe use data from the **US COVID-19 Variant Nowcast Hub**:\n- Genomic sequencing counts by location, date, and clade\n- Publicly available via S3 (see `s3_hubdata.ipynb`)\n- Pre-processed file: `counts_2025-02-19.tsv.gz`\n\n---",
+   "metadata": {}
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "# =============================================================================\n# DATA FILTERING AND PREPROCESSING\n# =============================================================================\n\n## Step 1: Filter Data by Location, Clade, and Date\n\n**Why filter?**\n- **Focus on recent variant dynamics**: Post-October 2024 data captures current competition\n- **Select relevant clades**: Recent variants of concern (24A, 24C, 24E, 24F, 24H, 24I, 25A) plus recombinants and \"other\"\n- **US states only**: Restricts analysis to 50 states for consistency\n\nThis reduces the dataset from 210K+ observations to a focused subset for modeling."
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# =============================================================================\n# IMPORTS\n# =============================================================================\nimport polars as pl\nimport numpy as np\nimport pandas as pd\nimport pymc as pm\nimport pytensor as pt\nimport arviz as az\nimport seaborn as sns\nimport matplotlib.pyplot as plt\n\nprint(f\"PyMC version: {pm.__version__}\")\nprint(f\"ArviZ version: {az.__version__}\")"
+  },
+  {
+   "cell_type": "markdown",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# =============================================================================\n# DATA LOADING AND EXPLORATION\n# =============================================================================\n\n## US States Reference Data\n\nWe'll be working with data from all 50 US states. The following cells define:\n- **Full state names**: For filtering the dataset\n- **State abbreviations**: For potential hub submissions (2-letter codes)"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# US States reference data\nus_states_full_names = [\n    \"Alabama\", \"Alaska\", \"Arizona\", \"Arkansas\", \"California\", \"Colorado\", \"Connecticut\", \n    \"Delaware\", \"Florida\", \"Georgia\", \"Hawaii\", \"Idaho\", \"Illinois\", \"Indiana\", \n    \"Iowa\", \"Kansas\", \"Kentucky\", \"Louisiana\", \"Maine\", \"Maryland\", \"Massachusetts\", \n    \"Michigan\", \"Minnesota\", \"Mississippi\", \"Missouri\", \"Montana\", \"Nebraska\", \n    \"Nevada\", \"New Hampshire\", \"New Jersey\", \"New Mexico\", \"New York\", \n    \"North Carolina\", \"North Dakota\", \"Ohio\", \"Oklahoma\", \"Oregon\", \n    \"Pennsylvania\", \"Rhode Island\", \"South Carolina\", \"South Dakota\", \n    \"Tennessee\", \"Texas\", \"Utah\", \"Vermont\", \"Virginia\", \n    \"Washington\", \"West Virginia\", \"Wisconsin\", \"Wyoming\"\n]\n\nus_states_abbreviation_dict = {\n    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA', \n    'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA', \n    'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', \n    'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', \n    'Maryland': 'MD', 'Massachusetts': 'MA', 'Michigan': 'MI', \n    'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO', \n    'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', \n    'New Hampshire': 'NH', 'New Jersey': 'NJ', \n    'New Mexico': 'NM', 'New York': 'NY', \n    'North Carolina': 'NC', 'North Dakota': 'ND', \n    'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', \n    'Pennsylvania': 'PA', 'Rhode Island': 'RI', \n    'South Carolina': 'SC', 'South Dakota': 'SD', \n    'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', \n    'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', \n    'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'\n}\n\nprint(f\"Number of US states: {len(us_states_full_names)}\")"
+  },
+  {
+   "cell_type": "markdown",
+   "source": "## Load Variant Count Data\n\nThe data comes from the **US COVID-19 Variant Nowcast Hub** and contains:\n- **location**: Geographic area (US states and some other locations)\n- **clade**: Nextstrain variant designation (e.g., 24A, 24C, 25A)\n- **date**: Sample collection date\n- **sequences**: Count of sequences for that location-clade-date combination",
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# Load the data\ndf = pl.read_csv(\"counts_2025-02-19.tsv.gz\", separator='\\t')\n\nprint(f\"Dataset shape: {df.shape}\")\nprint(f\"Unique locations: {df['location'].n_unique()}\")\nprint(f\"Unique clades: {df['clade'].n_unique()}\")\nprint(f\"Unique dates: {df['date'].n_unique()}\")\nprint(f\"Date range: {df['date'].min()} to {df['date'].max()}\")\n\ndf.head()"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (45, 1)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>location</th></tr><tr><td>i64</td></tr></thead><tbody><tr><td>36</td></tr><tr><td>21</td></tr><tr><td>12</td></tr><tr><td>30</td></tr><tr><td>15</td></tr><tr><td>&hellip;</td></tr><tr><td>17</td></tr><tr><td>44</td></tr><tr><td>41</td></tr><tr><td>38</td></tr><tr><td>35</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (45, 1)\n",
+       "┌──────────┐\n",
+       "│ location │\n",
+       "│ ---      │\n",
+       "│ i64      │\n",
+       "╞══════════╡\n",
+       "│ 36       │\n",
+       "│ 21       │\n",
+       "│ 12       │\n",
+       "│ 30       │\n",
+       "│ 15       │\n",
+       "│ …        │\n",
+       "│ 17       │\n",
+       "│ 44       │\n",
+       "│ 41       │\n",
+       "│ 38       │\n",
+       "│ 35       │\n",
+       "└──────────┘"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data.select('location').unique()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# Apply integer encoding to categorical columns\nprint(\"Converting categorical variables to integer indices...\")\n\n# Store mappings for later use (to reverse the encoding)\nlocation_mapping = {s: i for i, s in enumerate(data['location'].unique().to_list())}\nclade_mapping = {s: i for i, s in enumerate(data['clade'].unique().to_list())}\ndate_mapping = {s: i for i, s in enumerate(data['date'].unique().sort().to_list())}\n\n# Create reverse mappings for decoding later\nreverse_location_mapping = {v: k for k, v in location_mapping.items()}\nreverse_clade_mapping = {v: k for k, v in clade_mapping.items()}\nreverse_date_mapping = {v: k for k, v in date_mapping.items()}\n\n# Apply encodings\ndata = replace_string_with_int(df=data, column='clade')\ndata = replace_string_with_int(df=data, column='location')\ndata = replace_string_with_int(df=data, column='date')\n\n# Ensure columns are integer type\ndata = data.with_columns([\n    pl.col(\"clade\").cast(pl.Int64),\n    pl.col(\"location\").cast(pl.Int64),\n    pl.col(\"date\").cast(pl.Int64)\n])\n\nprint(f\"Location indices: 0 to {data['location'].max()}\")\nprint(f\"Clade indices: 0 to {data['clade'].max()}\")\nprint(f\"Date indices: 0 to {data['date'].max()}\")\n\ndata.head()"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Experimenting with Posterior Predictive output"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": "# Pivot from long to wide format\nprint(\"Pivoting data to multinomial count format...\")\n\npivot_df = data.pivot(\n    values=\"sequences\", \n    on=\"clade\",  # Columns will be clade indices\n    index=[\"location\", \"date\"],  # Group by location-date pairs\n    aggregate_function=\"sum\"  # Sum if multiple observations per group\n)\n\n# Fill missing values with 0 (some location-date-clade combinations may not exist)\npivot_df = pivot_df.fill_null(0)\n\n# Create a list column with count vectors for all clades\nclade_cols = pivot_df.columns[2:]  # All columns except location and date\npivot_df = pivot_df.with_columns([\n    pl.concat_list(clade_cols).alias(\"clade_counts\")\n])\n\n# Calculate total sequences per observation (n parameter for Multinomial)\npivot_df = pivot_df.with_columns([\n    pl.sum_horizontal(clade_cols).alias(\"total_counts\")\n])\n\nprint(f\"Pivoted data shape: {pivot_df.shape}\")\nprint(f\"Number of observations (location-date pairs): {len(pivot_df)}\")\n\npivot_df.head()"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "asper_pymc",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
