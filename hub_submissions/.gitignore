@@ -1,0 +1,39 @@
+# Generated data and outputs (old structure in scripts/)
+scripts/data/
+scripts/models/
+scripts/submissions/
+scripts/logs/
+
+# Generated data and outputs (new structure - keep directory structure, ignore contents)
+models/*/data/*
+models/*/fitted/*
+models/*/submissions/*
+models/*/logs/*
+!models/*/data/.gitkeep
+!models/*/fitted/.gitkeep
+!models/*/submissions/.gitkeep
+!models/*/logs/.gitkeep
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep directory structure but not contents
+!data/.gitkeep
+!models/.gitkeep
+!submissions/.gitkeep
+!logs/.gitkeep
