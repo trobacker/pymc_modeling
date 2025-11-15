@@ -3,10 +3,10 @@
 
 # Model Information
 model:
-  name: "PyMC-HMLR"  # Your model name
+  name: "PyMC-HMLR-Dirichlet-Hierarchical"  # Your model name
   team: "YourTeam"   # Your team name
-  full_name: "PyMC-HMLR"  # Will be formatted as {team}-{name}
-  description: "Hierarchical Multinomial Logistic Regression using PyMC"
+  full_name: "PyMC-HMLR-Dirichlet-Hierarchical"  # Will be formatted as {team}-{name}
+  description: "Hierarchical Multinomial Logistic Regression with Dirichlet-Multinomial observation and hierarchical hyperpriors"
 
 # Hub Repository
 hub:
@@ -50,7 +50,8 @@ modeling:
   n_warmup_prod: 3000  # Increased from 2000
 
   # Sampler parameters
-  cores: 4
+  chains: 1  # Single chain for testing hierarchical model
+  cores: 4   # Use multiple cores for internal computations
   target_accept: 0.90
   max_treedepth: 10
 
