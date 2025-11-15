@@ -10,10 +10,10 @@ source(file.path(hub_path, "src", "plot_summary_graphs.R"))
 
 # Set parameters
 # model_output_file should be relative to hub_path/model-output/
-model_output_file <- "YourTeam-PyMC-HMLR-Dirichlet/2025-11-14-YourTeam-PyMC-HMLR-Dirichlet.parquet"
+model_output_file <- "YourTeam-PyMC-HMLR-Dirichlet/2025-11-12-YourTeam-PyMC-HMLR-Dirichlet.parquet"
 
 # S3 date: Most recent Monday on or before nowcast date
-# 2025-11-14 is Thursday, so most recent Monday is 2025-11-10
+# 2025-11-12 is Wednesday, so most recent Monday is 2025-11-10
 s3_data_date <- "2025-11-10"
 
 # Output to Desktop (must end with /)

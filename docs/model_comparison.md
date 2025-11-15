@@ -119,7 +119,7 @@ Var(θ_{iv}) ≈ p_mean,iv × (1 - p_mean,iv) / (concentration + 1)
 ## Test Results Summary
 
 ### Test Configuration (Both Models)
-- **Nowcast Date**: 2025-11-14
+- **Nowcast Date**: 2025-11-12
 - **S3 Data Date**: 2025-11-10 (most recent Monday)
 - **Training Period**: 2025-07-17 to 2025-10-17 (150 days lookback)
 - **MCMC Sampling**: 3000 draws, 500 warmup steps, 4 chains
@@ -141,7 +141,7 @@ Var(θ_{iv}) ≈ p_mean,iv × (1 - p_mean,iv) / (concentration + 1)
 - Convergence: Expected good (Rhat < 1.01)
 
 ### Dirichlet-Multinomial Results
-**Status**: Successfully tested (2025-11-14 nowcast)
+**Status**: Successfully tested (2025-11-12 nowcast)
 
 **Performance:**
 - Runtime: ~16 minutes (3000 draws, 500 warmup)
@@ -150,7 +150,7 @@ Var(θ_{iv}) ≈ p_mean,iv × (1 - p_mean,iv) / (concentration + 1)
 - Submission Validation: ✓ Passed all hub checks
 
 **Submission Details:**
-- File: `2025-11-14-YourTeam-PyMC-HMLR-Dirichlet.parquet`
+- File: `2025-11-12-YourTeam-PyMC-HMLR-Dirichlet.parquet`
 - Total Rows: 1,323,504
   - 52 locations (all US states + DC + PR)
   - 42 target dates (32-day nowcast + 10-day forecast)
@@ -162,7 +162,7 @@ Var(θ_{iv}) ≈ p_mean,iv × (1 - p_mean,iv) / (concentration + 1)
 - Validation: ✓ All checks passed
 
 **Prediction Period:**
-- Nowcast: 2025-10-14 to 2025-11-14 (32 days)
+- Nowcast: 2025-10-12 to 2025-11-12 (32 days)
 - Forecast: 2025-11-15 to 2025-11-24 (10 days)
 
 ---
@@ -404,8 +404,8 @@ Choose model based on:
 
 ## Version History
 
-**2025-11-14**: Initial model comparison documentation
-- Tested Dirichlet-Multinomial on 2025-11-14 nowcast
+**2025-11-12**: Initial model comparison documentation
+- Tested Dirichlet-Multinomial on 2025-11-12 nowcast
 - Updated both models with improved MCMC configuration
 - Extended training lookback to 150 days
 - Documented test results and validation
