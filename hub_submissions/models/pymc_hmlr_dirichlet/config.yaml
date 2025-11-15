@@ -3,10 +3,10 @@
 
 # Model Information
 model:
-  name: "PyMC-HMLR"  # Your model name
+  name: "PyMC-HMLR-Dirichlet"  # Your model name
   team: "YourTeam"   # Your team name
-  full_name: "PyMC-HMLR"  # Will be formatted as {team}-{name}
-  description: "Hierarchical Multinomial Logistic Regression using PyMC"
+  full_name: "PyMC-HMLR-Dirichlet"  # Will be formatted as {team}-{name}
+  description: "Hierarchical Multinomial Logistic Regression with Dirichlet-Multinomial observation process"
 
 # Hub Repository
 hub:
