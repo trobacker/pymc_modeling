@@ -42,8 +42,8 @@ data:
 modeling:
   # MCMC sampling parameters
   # For quick testing (increased for better convergence)
-  n_draws_test: 3000  # Increased from 1000
-  n_warmup_test: 500  # Increased from 200
+  n_draws_test: 2000  # Quick test with larger priors
+  n_warmup_test: 500  # Warmup draws
 
   # For production submissions (increased for better posterior exploration)
   n_draws_prod: 15000  # Increased from 10000

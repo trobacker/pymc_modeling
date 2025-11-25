@@ -188,8 +188,9 @@ def build_and_fit_model(time, locations, Y, total_counts, dimensions, config):
         # These allow partial pooling: each alpha[l,c] shares information across locations/clades
         # mu_alpha represents the global mean intercept
         # sigma_alpha controls how much individual alphas can vary around this mean
-        mu_alpha = pm.Normal('mu_alpha', mu=0, sigma=3)
-        sigma_alpha = pm.HalfNormal('sigma_alpha', sigma=3)
+        # Using larger (more uninformative) priors: sigma=10 instead of sigma=3
+        mu_alpha = pm.Normal('mu_alpha', mu=0, sigma=10)
+        sigma_alpha = pm.HalfNormal('sigma_alpha', sigma=10)
 
         # Hierarchical priors for intercepts (one per location-clade combination)
         # These represent log-odds in the multinomial logistic regression
@@ -201,8 +202,9 @@ def build_and_fit_model(time, locations, Y, total_counts, dimensions, config):
         # mu_beta represents the global mean trend
         # sigma_beta controls how much individual trends can vary
         # Slopes typically have smaller magnitude than intercepts
-        mu_beta = pm.Normal('mu_beta', mu=0, sigma=1)
-        sigma_beta = pm.HalfNormal('sigma_beta', sigma=1)
+        # Using larger (more uninformative) priors: sigma=5 instead of sigma=1
+        mu_beta = pm.Normal('mu_beta', mu=0, sigma=5)
+        sigma_beta = pm.HalfNormal('sigma_beta', sigma=5)
 
         # Hierarchical priors for slopes
         beta = pm.Normal('beta', mu=mu_beta, sigma=sigma_beta,
@@ -228,8 +230,9 @@ def build_and_fit_model(time, locations, Y, total_counts, dimensions, config):
         # Use hierarchical prior to allow concentration to vary by location
         # This enables the model to learn appropriate uncertainty levels per location
         # (e.g., wider intervals for FL, narrower intervals for CA)
-        mu_concentration = pm.Normal('mu_concentration', mu=np.log(50), sigma=1)
-        sigma_concentration = pm.HalfNormal('sigma_concentration', sigma=1)
+        # Using larger (more uninformative) priors: sigma=3 instead of sigma=1
+        mu_concentration = pm.Normal('mu_concentration', mu=np.log(50), sigma=3)
+        sigma_concentration = pm.HalfNormal('sigma_concentration', sigma=3)
 
         # Location-specific concentration parameters (one per location)
         log_concentration = pm.Normal('log_concentration',
