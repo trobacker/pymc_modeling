@@ -45,14 +45,14 @@ modeling:
   n_draws_test: 2000  # Quick test with larger priors
   n_warmup_test: 500  # Warmup draws
 
-  # For production submissions (increased for better posterior exploration)
-  n_draws_prod: 15000  # Increased from 10000
-  n_warmup_prod: 3000  # Increased from 2000
+  # For production submissions (reduced for faster iteration with higher acceptance)
+  n_draws_prod: 5000  # Reduced from 15000 for faster runs
+  n_warmup_prod: 1000  # Reduced from 3000
 
   # Sampler parameters
   chains: 1  # Single chain for testing hierarchical model
   cores: 4   # Use multiple cores for internal computations
-  target_accept: 0.90
+  target_accept: 0.95  # Increased from 0.90 to reduce divergences
   max_treedepth: 10
 
   # Prior parameters

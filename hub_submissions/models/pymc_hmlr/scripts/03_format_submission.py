@@ -308,9 +308,10 @@ def save_submission(df, output_dir, nowcast_date, model_name, file_format):
 
     if file_format == "parquet":
         output_file = output_dir / f"{filename}.parquet"
-        # Convert date columns to datetime objects (required for hub plotting functions)
-        df['nowcast_date'] = pd.to_datetime(df['nowcast_date'])
-        df['target_date'] = pd.to_datetime(df['target_date'])
+        # Convert date columns to date objects (not datetime/POSIX timestamps)
+        # Hub requires date32[day] format, not timestamp format
+        df['nowcast_date'] = pd.to_datetime(df['nowcast_date']).dt.date
+        df['target_date'] = pd.to_datetime(df['target_date']).dt.date
         # Write parquet directly with pandas
         df.to_parquet(output_file, index=False, engine='pyarrow')
     elif file_format == "csv":
