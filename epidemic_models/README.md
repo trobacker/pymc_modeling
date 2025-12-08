@@ -15,7 +15,7 @@ This directory contains Bayesian epidemic modeling examples using PyMC.
 
 ## Environment
 
-These notebooks use the `asper_pymc` conda environment from the main repository. Required packages:
+These notebooks use the existing `.venv` environment from the main repository. Required packages:
 - PyMC 5.20.1+
 - ArviZ 0.20.0+
 - NumPy
@@ -23,19 +23,25 @@ These notebooks use the `asper_pymc` conda environment from the main repository.
 - Matplotlib/Seaborn
 - Pandas
 
+Optional packages for enhanced visualization:
+- `graphviz` (Python package + system binary) - for model structure visualization
+  - Install: `pip install graphviz` + system package (e.g., `brew install graphviz`)
+  - Note: The tutorial works fine without this - it's only for visualizing the model DAG
+
 ## Getting Started
 
-1. Activate the environment:
-   ```bash
-   conda activate asper_pymc
-   ```
+1. Ensure you're in the repository root and have activated the environment
 
 2. Launch Jupyter:
    ```bash
    jupyter notebook
    ```
 
-3. Open `sir_epidemic_model_tutorial.ipynb` and run through the cells sequentially
+3. Navigate to `epidemic_models/` and open `sir_epidemic_model_tutorial.ipynb`
+
+4. Select the "pymc-modeling" kernel (or your environment kernel) and run cells sequentially
+
+**Note**: The notebook will display a message about graphviz being optional if it's not installed. This is expected and the tutorial will work perfectly without it.
 
 ## Model Overview: SIR Epidemic Model
 
