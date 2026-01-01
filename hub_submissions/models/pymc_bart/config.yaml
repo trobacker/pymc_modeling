@@ -1,0 +1,96 @@
+# Configuration for Variant Nowcast Hub Submissions - BART Model
+# =============================================================================
+
+# Model Information
+model:
+  name: "PyMC-BART"  # Your model name
+  team: "YourTeam"   # Your team name
+  full_name: "PyMC-BART"
+  description: "Bayesian Additive Regression Trees (BART) for variant nowcasting with flexible non-parametric temporal modeling"
+
+# Hub Repository
+hub:
+  repo_path: "/Users/trobacker/GitHub/variant-nowcast-hub"
+  target_data_path: "target-data/time-series"
+  model_output_path: "model-output"
+
+# Data Parameters
+data:
+  # All 52 US locations (50 states + DC + PR)
+  locations: [
+    "AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DC", "DE", "FL",
+    "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA",
+    "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE",
+    "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "PR",
+    "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI",
+    "WV", "WY"
+  ]
+
+  # Minimum sequences required for a location-date to be included
+  min_sequences: 5
+
+  # Training data lookback period (days before nowcast_date)
+  training_lookback_days: 150
+
+  # Required clades (must always be present in submission)
+  required_clades: ["24A", "24B", "24C", "recombinant", "other"]
+
+  # Optional clades (include if present in data)
+  optional_clades: ["24E", "24F", "24G", "24H", "24I", "25A"]
+
+# Model Parameters
+modeling:
+  # MCMC sampling parameters
+  # For quick testing
+  n_draws_test: 1000   # Fewer draws for BART (trees converge faster)
+  n_warmup_test: 500
+
+  # For production submissions
+  n_draws_prod: 3000   # BART typically needs fewer samples than HMLR
+  n_warmup_prod: 1000
+
+  # Sampler parameters
+  chains: 2            # Fewer chains for BART (each chain is more expensive)
+  cores: 4
+  target_accept: 0.90  # Lower target_accept is usually fine for BART
+
+  # BART-specific parameters
+  n_trees: 50          # Number of trees in ensemble (default: 50-200)
+  n_particles: 10      # Particle Gibbs BART particles (default: 10-20)
+
+  # Overdispersion model
+  use_dirichlet: true  # Use Dirichlet-Multinomial (true) or plain Multinomial (false)
+  concentration_init: 50  # Initial concentration parameter for Dirichlet
+
+  # Use test or production settings
+  mode: "test"  # Options: "test" or "prod"
+
+# Submission Parameters
+submission:
+  # Number of samples to submit (must be exactly 100 per tasks.json)
+  n_samples: 100
+
+  # Submit both samples and means
+  include_samples: true
+  include_mean: true
+
+  # Nowcast period (days before nowcast_date, inclusive)
+  nowcast_lookback_days: 31  # 32 days total
+
+  # Forecast horizon (days into the future from nowcast_date)
+  forecast_horizon: 10
+
+  # Output format
+  format: "parquet"  # Options: "parquet" or "csv"
+
+# Paths (relative to models/pymc_bart/)
+paths:
+  data: "data"
+  models: "fitted"
+  submissions: "submissions"
+  logs: "logs"
+
+# Logging
+logging:
+  level: "INFO"  # Options: "DEBUG", "INFO", "WARNING", "ERROR"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
