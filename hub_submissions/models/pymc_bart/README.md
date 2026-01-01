@@ -1,308 +1,214 @@
 # PyMC BART Variant Nowcast Model
 
-Bayesian Additive Regression Trees (BART) implementation for COVID-19 variant proportion nowcasting and forecasting.
+Bayesian Additive Regression Trees (BART) for COVID-19 variant nowcasting with flexible non-parametric modeling.
 
 ## Overview
 
-This model uses **BART** - a flexible non-parametric Bayesian approach - to model variant proportions over time and across locations. Unlike hierarchical multinomial logistic regression (HMLR), BART automatically learns complex non-linear temporal patterns through an ensemble of regression trees.
+BART automatically learns complex non-linear temporal patterns through tree ensembles, capturing sharp variant transitions better than linear models. Each clade gets its own BART ensemble with location-time feature interactions.
 
-### Key Features
+**Key Features:**
+- Non-parametric: No functional form assumptions
+- Automatic interactions: Trees capture location-time patterns
+- Dirichlet-Multinomial: Optional overdispersion for uncertainty calibration
+- Full Bayesian: NUTS + PGBART hybrid sampling
 
-- **Non-parametric flexibility**: BART learns arbitrary time trends without specifying functional form
-- **Automatic feature interaction**: Trees naturally capture location-time interactions
-- **Built-in regularization**: Sum-of-trees prior provides adaptive shrinkage
-- **Uncertainty quantification**: Full Bayesian posterior for predictions
-- **Dirichlet-Multinomial**: Optional overdispersion layer for calibrated uncertainty
+**When to use BART vs HMLR:**
+- ✅ BART: Sharp transitions, complex dynamics, non-linear patterns
+- ✅ HMLR: Smooth trends, interpretable coefficients, faster iteration
 
-### Model Architecture
+## Quick Start
 
+```bash
+# 1. Setup (once)
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Run workflow
+cd scripts
+python run_workflow.py --nowcast-date 2024-11-13 --mode test
 ```
-For each clade k (K-1 parameterization):
-  η_k ~ BART(time, location)  [ensemble of regression trees]
 
-Proportions:
-  p = softmax([η_1, η_2, ..., η_{K-1}, 0])
-
-Observation model (optional Dirichlet layer):
-  θ ~ Dirichlet(concentration * p)
-  Y ~ Multinomial(n, θ)
-```
-
-**BART advantages over HMLR:**
-- Captures sharp variant transitions (e.g., emergence, displacement)
-- No need to specify hierarchical structure explicitly
-- Handles heterogeneous temporal patterns across locations
-- More robust to outliers via tree splits
-
-**BART considerations:**
-- More computationally expensive (tree sampling via PGBART)
-- Less interpretable than linear models (black box)
-- Requires more careful tuning of tree parameters
-
-## Directory Structure
-
-```
-pymc_bart/
-├── config.yaml              # Model configuration
-├── README.md               # This file
-├── scripts/
-│   ├── 01_fetch_data.py    # Fetch training data from S3
-│   ├── 02_fit_model.py     # Fit BART model
-│   ├── 03_format_submission.py  # Format hub submission
-│   ├── plot_submission.py  # Visualization (optional)
-│   └── run_workflow.py     # Full workflow orchestration
-├── data/                   # Training data (gitignored)
-├── fitted/                 # Model artifacts (gitignored)
-├── logs/                   # Logs (gitignored)
-└── submissions/            # Formatted submissions (gitignored)
-```
+This fetches data from S3, fits BART (10-30 min), and generates hub submission.
 
 ## Installation
 
-To run this model locally, follow these steps from this directory:
+### First-Time Setup
 
 ```bash
-# Create virtual environment
+# From pymc_bart directory
 python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
-# Activate environment
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-python -m pip install -r requirements.txt
-
-# Verify installation
-python -c "import pymc; import pymc_bart; print('✓ Environment ready!')"
+# Verify
+python -c "import pymc; import pymc_bart; print('✓ Ready!')"
 ```
 
-The first model run will take longer as BART fits tree ensembles (~10-30 minutes in test mode).
+### Each Session
+
+```bash
+source .venv/bin/activate  # Always activate before running
+cd scripts
+python run_workflow.py --nowcast-date 2024-11-13 --mode test
+```
+
+**Troubleshooting:** If you see `ModuleNotFoundError: No module named 'pymc_bart'`, you forgot to activate the `.venv` or need to run `pip install -r requirements.txt`.
 
 ## Usage
 
-### Quick Start
-
-Run the complete workflow for a specific nowcast date:
+### Complete Workflow
 
 ```bash
 cd scripts
 python run_workflow.py --nowcast-date 2024-11-13 --mode test
 ```
 
-This will:
-1. Fetch training data from S3 (150 days lookback)
-2. Fit BART model (test mode: 1000 draws, 500 warmup)
-3. Generate submission file with 100 samples + mean
+**Modes:**
+- `test`: 1000 draws, 500 warmup (~10-30 min)
+- `prod`: 3000 draws, 1000 warmup (~1-3 hours)
 
-### Step-by-Step
+### Individual Steps
 
-**1. Fetch training data:**
 ```bash
+# 1. Fetch data (150 days lookback)
 python 01_fetch_data.py --nowcast-date 2024-11-13
-```
 
-**2. Fit BART model:**
-```bash
-# Test mode (fast, fewer samples)
+# 2. Fit model
 python 02_fit_model.py --nowcast-date 2024-11-13 --mode test
 
-# Production mode (slower, more samples)
-python 02_fit_model.py --nowcast-date 2024-11-13 --mode prod
-```
-
-**3. Format submission:**
-```bash
+# 3. Format submission
 python 03_format_submission.py --nowcast-date 2024-11-13
-```
 
-**4. (Optional) Visualize results:**
-```bash
-python plot_submission.py --nowcast-date 2024-11-13
-```
-
-### Advanced Options
-
-**Custom configuration:**
-```bash
-python run_workflow.py --nowcast-date 2024-11-13 --config custom_config.yaml
-```
-
-**Skip steps (use existing artifacts):**
-```bash
-# Skip data fetching
-python run_workflow.py --nowcast-date 2024-11-13 --skip-data
-
-# Skip both data and model (only format submission)
-python run_workflow.py --nowcast-date 2024-11-13 --skip-data --skip-model
-```
-
-**Custom forecast horizon:**
-```bash
-python 03_format_submission.py --nowcast-date 2024-11-13 --forecast-horizon 14
+# 4. Plot (optional)
+python plot_submission.py --nowcast-date 2024-11-13 --location CA
 ```
 
 ## Configuration
 
-Edit `config.yaml` to customize model behavior:
+Edit `config.yaml`:
 
-### Key Parameters
+```yaml
+modeling:
+  mode: "test"        # or "prod"
+  n_trees: 50         # Trees per clade
+  n_draws_test: 1000  # MCMC samples
+  chains: 2
 
-**BART-specific:**
-- `n_trees`: Number of trees in ensemble (default: 50)
-  - More trees = more flexible, but slower
-  - Typical range: 20-200
-- `n_particles`: PGBART particles (default: 10)
-  - More particles = better mixing, but slower
-  - Typical range: 5-20
-
-**Sampling:**
-- `n_draws_test`: 1000 (faster for testing)
-- `n_draws_prod`: 3000 (more robust for production)
-- `chains`: 2 (BART is expensive per chain)
-- `cores`: 4
-
-**Overdispersion:**
-- `use_dirichlet`: true (recommended for calibrated uncertainty)
-- `concentration_init`: 50 (higher = tighter around mean)
-
-**Data:**
-- `training_lookback_days`: 150 (5 months of training data)
-- `min_sequences`: 5 (filter low-count observations)
-
-## Model Interpretation
-
-### BART Components
-
-Each clade has its own BART model:
-- **Trees**: Each tree captures a specific pattern (e.g., "California after day 100")
-- **Ensemble**: Sum of trees provides flexible function approximation
-- **Regularization**: Prior on tree depth and number of terminal nodes prevents overfitting
-
-### Feature Engineering
-
-BART receives:
-- **Time**: Centered/scaled date indices
-- **Location**: One-hot encoded (50 states + DC + PR)
-
-The trees automatically learn interactions like:
-- "Clade X grows rapidly in location Y after time T"
-- "Clade Z plateaus everywhere after time T'"
-
-### Prediction Strategy
-
-For new times/locations:
-- **In-sample**: Direct BART evaluation
-- **Extrapolation**: Trees extend patterns linearly beyond training range
-- **Missing locations**: Average across observed locations
-
-## Output Format
-
-Submissions follow variant-nowcast-hub specifications:
-
-**Columns:**
-- `nowcast_date`: Submission date
-- `target_date`: Date being predicted
-- `clade`: Variant clade name
-- `location`: 2-letter state code
-- `output_type`: "sample" or "mean"
-- `output_type_id`: Sample identifier (for samples)
-- `value`: Predicted proportion [0, 1]
-
-**Structure:**
-- 100 samples per task (location × date × clade)
-- Mean predictions for each task
-- Proportions sum to 1 within each sample
-
-## Diagnostics
-
-### During Fitting
-
-Monitor for:
-- **Divergences**: Should be 0 (BART rarely diverges)
-- **Tree depth**: Check if hitting max depth (increase if needed)
-- **Acceptance rate**: BART uses PGBART, not NUTS (no target_accept)
-
-### Trace Inspection
-
-```python
-import arviz as az
-
-# Load trace
-trace = az.from_netcdf("fitted/trace_2024-11-13.nc")
-
-# Summary statistics
-print(az.summary(trace))
-
-# Trace plots
-az.plot_trace(trace, var_names=['mu_concentration', 'sigma_concentration'])
-
-# Posterior predictive check
-az.plot_ppc(trace, group='posterior_predictive')
+data:
+  training_lookback_days: 150
+  min_sequences: 5
 ```
 
-### Submission Validation
+**Key parameters:**
+- `n_trees`: More = flexible but slower (20-200)
+- `n_draws`: More = better inference but slower
+- `training_lookback_days`: Historical context (60-180)
 
-The workflow automatically validates:
-- All required clades present
-- Values in [0, 1]
-- Proportions sum to 1
-- Exactly 100 samples per task
+## Model Architecture
 
-## Comparison with HMLR
+```
+For each clade k:
+  η_k ~ BART(time, location)  [50-tree ensemble]
+
+Proportions:
+  p = softmax([η_1, ..., η_{K-1}, 0])
+
+Observation:
+  θ ~ Dirichlet(concentration_location * p)
+  Y ~ Multinomial(n, θ)
+```
+
+**Features:**
+- Time: Centered/scaled date indices
+- Location: One-hot encoded (52 US locations)
+- Concentration: Location-specific (hierarchical prior)
+
+## Output
+
+**Submission format:**
+- `submissions/YYYY-MM-DD-YourTeam-PyMC-BART.parquet`
+- 100 samples + mean per task
+- 32-day nowcast + 10-day forecast
+
+**Model artifacts:**
+- `data/training_data_*.parquet` - Processed training data
+- `fitted/trace_*.nc` - MCMC samples
+- `logs/` - Execution logs
+
+## Documentation
+
+- **README.md** (this file): Quick start and usage
+- **PYMC_MODELING_GUIDE.md**: Technical deep dive (PyMC details, priors, sampling)
+- **requirements.txt**: Dependencies
+
+## Performance
+
+**Test mode:**
+- Time: 10-30 minutes
+- Memory: 2-4 GB
+- Good for: Iteration, testing
+
+**Production mode:**
+- Time: 1-3 hours
+- Memory: 4-8 GB
+- Good for: Final submissions
+
+**Too slow?** Reduce `n_trees` (50→20) or `training_lookback_days` (150→60) in `config.yaml`.
+
+## Comparison: BART vs HMLR
 
 | Aspect | BART | HMLR |
 |--------|------|------|
-| **Flexibility** | High (non-parametric) | Medium (linear in logit) |
-| **Interpretability** | Low (black box) | High (coefficients) |
-| **Speed** | Slower (tree sampling) | Faster (gradient-based) |
-| **Transitions** | Captures sharp changes | Smooth trends |
-| **Extrapolation** | Linear tree extension | Linear logit trends |
-| **Tuning** | Trees, particles | Priors, concentration |
+| Flexibility | High (non-parametric) | Medium (linear) |
+| Speed | Slower (trees) | Faster (gradient) |
+| Sharp transitions | Excellent | Limited |
+| Interpretability | Low (black box) | High (coefficients) |
+| Use case | Complex dynamics | Smooth trends |
 
-**When to use BART:**
-- Expect non-linear variant dynamics
-- Care more about prediction than interpretation
-- Have sufficient compute resources
-- Want automatic feature engineering
+## Dependencies
 
-**When to use HMLR:**
-- Need interpretable coefficients
-- Want faster iteration
-- Prefer smooth extrapolations
-- Have strong prior beliefs about trends
+```
+pymc>=5.20.1           # Bayesian modeling
+pymc-bart>=0.6.0       # BART implementation
+numpyro>=0.13.0        # Fast sampling backend
+polars>=0.20.0         # Data handling
+arviz>=0.20.0          # Diagnostics
+```
+
+See `requirements.txt` for complete list.
 
 ## Troubleshooting
 
-**Memory issues:**
-- Reduce `n_trees` (e.g., 50 → 20)
-- Reduce `chains` (e.g., 4 → 2)
-- Filter data more aggressively (`min_sequences`)
+**"No module named 'pymc_bart'"**
+- Activate environment: `source .venv/bin/activate`
+- Install: `pip install -r requirements.txt`
 
-**Slow sampling:**
-- Use test mode initially
-- Reduce `n_particles` (10 → 5)
-- Use fewer chains with more cores per chain
+**Slow sampling**
+- Reduce `n_trees` in config.yaml (50→20)
+- Use test mode instead of prod
+- Reduce `training_lookback_days` (150→60)
 
-**Poor predictions:**
-- Increase `n_trees` for more flexibility
-- Extend `training_lookback_days` for more history
-- Tune `concentration_init` for better calibration
+**Out of memory**
+- Reduce `n_trees` (50→10)
+- Reduce `chains` (2→1)
+- Filter more data: increase `min_sequences` (5→20)
 
-**Divergences (rare for BART):**
-- Check data preprocessing (outliers?)
-- Ensure proportions sum to 1
-- Try reducing `use_dirichlet` to false
+**Which environment am I using?**
+```bash
+which python  # Should show .../pymc_bart/.venv/bin/python
+echo $VIRTUAL_ENV  # Should show .../pymc_bart/.venv
+```
+
+## Model-Specific Environments
+
+This model uses its own `.venv` to avoid conflicts:
+- `pymc_bart` needs `pymc-bart` (other models don't)
+- Different models can use different package versions
+- Clean isolation per model
 
 ## References
 
 - **BART**: Chipman, George, McCulloch (2010). "BART: Bayesian additive regression trees"
 - **PyMC-BART**: https://github.com/pymc-devs/pymc-bart
-- **PGBART**: Lakshminarayanan & Roy (2015). "Particle Gibbs for Bayesian Additive Regression Trees"
 - **Variant Nowcast Hub**: https://github.com/reichlab/variant-nowcast-hub
-
-## License
-
-Same as parent repository.
-
-## Contact
-
-For questions about this BART implementation, consult the PyMC forum or open an issue in the repository.
