@@ -6,6 +6,10 @@ Fit PyMC Hierarchical Multinomial Model
 This script fits the hierarchical multinomial logistic regression model
 to the training data using PyMC.
 
+Prerequisites:
+    Activate the virtual environment first:
+    $ source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
+
 Usage:
     python 02_fit_model.py --nowcast-date 2024-11-13
     python 02_fit_model.py --nowcast-date 2024-11-13 --mode prod
