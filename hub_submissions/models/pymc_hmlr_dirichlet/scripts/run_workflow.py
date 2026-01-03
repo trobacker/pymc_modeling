@@ -8,6 +8,10 @@ This script orchestrates the complete workflow:
 2. Fit PyMC model
 3. Format and validate submission
 
+Prerequisites:
+    Activate the virtual environment first:
+    $ source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
+
 Usage:
     python run_workflow.py --nowcast-date 2024-11-13
     python run_workflow.py --nowcast-date 2024-11-13 --mode prod

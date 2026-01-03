@@ -6,9 +6,13 @@ Fetch Training Data from Variant Nowcast Hub
 This script fetches the latest time-series data from the variant nowcast hub
 for a specified nowcast date. The data is used to train the PyMC model.
 
+Prerequisites:
+    Activate the virtual environment first:
+    $ source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
+
 Usage:
     python 01_fetch_data.py --nowcast-date 2024-11-13
-    python 01_fetch_data.py --nowcast-date 2024-11-13 --config config/config.yaml
+    python 01_fetch_data.py --nowcast-date 2024-11-13 --config ../config.yaml
 
 Author: Auto-generated workflow
 Date: 2025-11-14

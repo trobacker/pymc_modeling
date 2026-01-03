@@ -6,6 +6,10 @@ Format Submission for Variant Nowcast Hub
 This script takes the fitted model and generates submissions in the format
 required by the variant nowcast hub (samples and means).
 
+Prerequisites:
+    Activate the virtual environment first:
+    $ source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
+
 Usage:
     python 03_format_submission.py --nowcast-date 2024-11-13
     python 03_format_submission.py --nowcast-date 2024-11-13 --forecast-horizon 14

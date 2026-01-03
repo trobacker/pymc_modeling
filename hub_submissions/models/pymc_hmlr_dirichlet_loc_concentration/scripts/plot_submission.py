@@ -5,6 +5,10 @@ Plot Model Submission Results
 
 Generate visualizations of clade trajectory predictions from a submission file.
 
+Prerequisites:
+    Activate the virtual environment first:
+    $ source .venv/bin/activate  # or .venv\\Scripts\\activate on Windows
+
 Usage:
     python plot_submission.py --submission submissions/2025-11-14-YourTeam-PyMC-HMLR.parquet
 
